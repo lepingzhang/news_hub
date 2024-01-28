@@ -13,7 +13,7 @@
 在 `plugins/source.json` 文件中添加以下配置：
 ```
 {
-  "keyword_reply": {
+  "news_hub": {
     "repo": "https://github.com/lepingzhang/news_hub.git",
     "desc": "获取聚合类资讯"
   }
