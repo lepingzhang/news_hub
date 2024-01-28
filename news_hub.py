@@ -2,7 +2,8 @@ import requests
 import schedule
 import threading
 import time
-from plugins import register, Plugin, Event, Reply, ReplyType
+import re
+from plugins import register, Plugin, Event, Reply, ReplyType, logger
 from utils.api import send_txt
 
 def send_img(image_url, target):
@@ -21,6 +22,15 @@ class NewsHub(Plugin):
 
     def will_generate_reply(self, event: Event):
         query = event.message.content.strip()
+        is_group = event.message.is_group
+        is_at = event.message.is_at
+
+        # 如果是群聊并且艾特了机器人，尝试去除艾特部分
+        if is_group and is_at:
+            # 使用正则表达式去除艾特部分和后面的空白字符
+            query = re.sub(r'@[\w]+\s+', '', query, count=1).strip()
+
+        # 检查处理后的消息是否包含任一配置命令
         commands = self.config.get("command", [])
         if any(cmd in query for cmd in commands):
             if query in ["早报", "今天有什么新闻"]:
@@ -36,6 +46,9 @@ class NewsHub(Plugin):
             elif query == "名人名言":
                 self.handle_famous_quotes(event)
             event.bypass()
+        else:
+            # 如果消息内容不包含任一配置命令，可以记录日志或进行其他处理
+            logger.info(f"Received a message but no command was found: {query}")
 
     def start_schedule(self):
         if self.scheduler_thread is None:
