@@ -20,19 +20,22 @@ class NewsHub(Plugin):
         self.scheduler_thread = None
         self.start_schedule()
 
-    def will_generate_reply(self, event: Event):
+    def did_receive_message(self, event: Event):
+        logger.info(f"Message received in did_receive_message: {event.message.content}")
+        logger.info(f"Attempting to pass message to will_generate_reply: {event.message.content}")
         query = event.message.content.strip()
         is_group = event.message.is_group
-        is_at = event.message.is_at
 
         # 如果是群聊并且艾特了机器人，尝试去除艾特部分
-        if is_group and is_at:
+        if is_group:
             # 使用正则表达式去除艾特部分和后面的空白字符
             query = re.sub(r'@[\w]+\s+', '', query, count=1).strip()
+        logger.info(f"Query after processing: '{query}', Is group: {is_group}")
 
         # 检查处理后的消息是否包含任一配置命令
         commands = self.config.get("command", [])
-        if any(cmd in query for cmd in commands):
+        if any(re.search(r'\b' + re.escape(cmd) + r'\b', query) for cmd in commands):
+            logger.info(f"Command found: Processing {query}")
             if query in ["早报", "今天有什么新闻"]:
                 self.handle_daily_news(event, reply_mode="image")
             elif "今天天气怎么样" in query:
@@ -48,7 +51,14 @@ class NewsHub(Plugin):
             event.bypass()
         else:
             # 如果消息内容不包含任一配置命令，可以记录日志或进行其他处理
+            logger.info(f"No command found for: {query}")
             logger.info(f"Received a message but no command was found: {query}")
+            # 这里可以添加处理接收到的消息的逻辑
+            # 如果没有特定的逻辑，可以简单地通过
+            pass
+
+    def will_generate_reply(self, event: Event):
+        logger.info(f"Message received in will_generate_reply: {event.message.content}")
 
     def start_schedule(self):
         if self.scheduler_thread is None:
@@ -93,7 +103,6 @@ class NewsHub(Plugin):
                 return [formatted_news, image_url]
         else:
             logger.error(f"Failed to fetch daily news: {response.text}")
-            # 可以发送一条错误消息或者进行其他处理
 
     def daily_push(self):
         schedule_time = self.config.get("schedule_time")
@@ -228,18 +237,11 @@ class NewsHub(Plugin):
     def help(self, **kwargs) -> str:
         return "每日定时或手动发送早报，及处理笑话、天气、油价、微博热搜和名人名言请求"
 
-    def did_receive_message(self, event: Event):
-        # 这里可以添加处理接收到的消息的逻辑
-        # 如果没有特定的逻辑，可以简单地通过
-        pass
-
-    # 重写 will_decorate_reply 方法
     def will_decorate_reply(self, event: Event):
         # 这里可以添加在发送回复之前的装饰逻辑
         # 如果没有特定的逻辑，可以简单地通过
         pass
 
-    # 重写 will_send_reply 方法
     def will_send_reply(self, event: Event):
         # 这里可以添加发送回复之前的逻辑
         # 如果没有特定的逻辑，可以简单地通过
