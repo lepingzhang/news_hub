@@ -43,9 +43,6 @@ class NewsHub(Plugin):
         else:
             pass
 
-    def will_generate_reply(self, event: Event):
-        pass
-
     def start_schedule(self):
         if self.scheduler_thread is None:
             schedule_time = self.config.get("schedule_time")
@@ -125,11 +122,17 @@ class NewsHub(Plugin):
 
             if image_url and (reply_mode == "image" or reply_mode == "both"):
                 image_reply = Reply(ReplyType.IMAGE, image_url)
-                event.channel.send(image_reply, event.message)
-            
+                try:
+                    event.channel.send(image_reply, event.message)
+                except Exception as e:
+                    logger.error(f"Error sending message. Type: {reply.type}, Content: {reply.content}, Error: {e}")
+
             if reply_mode == "text" or reply_mode == "both":
                 text_reply = Reply(ReplyType.TEXT, formatted_news)
-                event.channel.send(text_reply, event.message)
+                try:
+                    event.channel.send(text_reply, event.message)
+                except Exception as e:
+                    logger.error(f"Error sending message. Type: {reply.type}, Content: {reply.content}, Error: {e}")
         else:
             logger.error(f"Failed to fetch daily news: {response.text}")
 
@@ -210,11 +213,14 @@ class NewsHub(Plugin):
         else:
             logger.error(f"Failed to fetch famous quotes: {response.text}")
 
-    def help(self, **kwargs) -> str:
-        return "每日定时或手动发送早报，及处理笑话、天气、油价、微博热搜和名人名言请求"
-
     def will_decorate_reply(self, event: Event):
         pass
 
     def will_send_reply(self, event: Event):
         pass
+
+    def will_generate_reply(self, event: Event):
+        pass
+
+    def help(self, **kwargs) -> str:
+        return "每日定时或手动发送早报，及处理笑话、天气、油价、微博热搜和名人名言请求"
