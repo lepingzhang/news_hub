@@ -7,8 +7,6 @@ from plugins import register, Plugin, Event, Reply, ReplyType, logger
 from utils.api import send_txt
 
 def send_img(image_url, target):
-    # 实现发送图片的逻辑
-    # 在这里添加发送图片的代码
     pass
 
 @register
@@ -21,21 +19,14 @@ class NewsHub(Plugin):
         self.start_schedule()
 
     def did_receive_message(self, event: Event):
-        logger.info(f"Message received in did_receive_message: {event.message.content}")
-        logger.info(f"Attempting to pass message to will_generate_reply: {event.message.content}")
         query = event.message.content.strip()
         is_group = event.message.is_group
 
-        # 如果是群聊并且艾特了机器人，尝试去除艾特部分
         if is_group:
-            # 使用正则表达式去除艾特部分和后面的空白字符
             query = re.sub(r'@[\w]+\s+', '', query, count=1).strip()
-        logger.info(f"Query after processing: '{query}', Is group: {is_group}")
 
-        # 检查处理后的消息是否包含任一配置命令
         commands = self.config.get("command", [])
         if any(re.search(r'\b' + re.escape(cmd) + r'\b', query) for cmd in commands):
-            logger.info(f"Command found: Processing {query}")
             if query in ["早报", "今天有什么新闻"]:
                 self.handle_daily_news(event, reply_mode="image")
             elif "今天天气怎么样" in query:
@@ -50,15 +41,10 @@ class NewsHub(Plugin):
                 self.handle_famous_quotes(event)
             event.bypass()
         else:
-            # 如果消息内容不包含任一配置命令，可以记录日志或进行其他处理
-            logger.info(f"No command found for: {query}")
-            logger.info(f"Received a message but no command was found: {query}")
-            # 这里可以添加处理接收到的消息的逻辑
-            # 如果没有特定的逻辑，可以简单地通过
             pass
 
     def will_generate_reply(self, event: Event):
-        logger.info(f"Message received in will_generate_reply: {event.message.content}")
+        pass
 
     def start_schedule(self):
         if self.scheduler_thread is None:
@@ -82,7 +68,6 @@ class NewsHub(Plugin):
         payload = f"token={token}&format=json"
         headers = {'Content-Type': "application/x-www-form-urlencoded"}
 
-        # 发送请求获取早报数据
         response = requests.request("POST", zaobao_api_url, data=payload, headers=headers)
         if response.status_code == 200:
             data = response.json()['data']
@@ -91,10 +76,8 @@ class NewsHub(Plugin):
             image_url = data['image']
             date = data['date']
 
-            # 格式化文本消息
             formatted_news = f"【今日早报】{date}\n\n" + "\n".join(news_list) + f"\n\n{weiyu}"
 
-            # 根据reply_mode返回不同类型的回复
             if reply_mode == "text":
                 return formatted_news
             elif reply_mode == "image":
@@ -112,13 +95,12 @@ class NewsHub(Plugin):
 
         single_chat_list = self.config.get("single_chat_list", [])
         group_chat_list = self.config.get("group_chat_list", [])
-        reply_content = self.get_daily_news(reply_mode="text")  # 以文本模式获取早报
+        reply_content = self.get_daily_news(reply_mode="text")
         if reply_content:
-            reply = Reply(ReplyType.TEXT, reply_content)  # 创建 Reply 对象
+            reply = Reply(ReplyType.TEXT, reply_content)
             self.push_to_chat(reply, single_chat_list, group_chat_list)
 
     def push_to_chat(self, reply, single_chat_list, group_chat_list):
-        # 统一处理消息推送
         for chat_id in single_chat_list + group_chat_list:
             if reply.type == ReplyType.TEXT:
                 send_txt(reply.content, chat_id)
@@ -131,7 +113,6 @@ class NewsHub(Plugin):
         payload = f"token={token}&format=json"
         headers = {'Content-Type': "application/x-www-form-urlencoded"}
 
-        # 发送请求获取早报数据
         response = requests.request("POST", zaobao_api_url, data=payload, headers=headers)
         if response.status_code == 200:
             data = response.json()['data']
@@ -140,21 +121,17 @@ class NewsHub(Plugin):
             image_url = data['image']
             date = data['date']
 
-            # 格式化文本消息
             formatted_news = f"【今日早报】{date}\n\n" + "\n".join(news_list) + f"\n\n{weiyu}"
 
-            # 发送图片消息，如果是手动触发则只发送图片
             if image_url and (reply_mode == "image" or reply_mode == "both"):
                 image_reply = Reply(ReplyType.IMAGE, image_url)
                 event.channel.send(image_reply, event.message)
             
-            # 发送文本消息，如果是定时推送则只发送文本
             if reply_mode == "text" or reply_mode == "both":
                 text_reply = Reply(ReplyType.TEXT, formatted_news)
                 event.channel.send(text_reply, event.message)
         else:
             logger.error(f"Failed to fetch daily news: {response.text}")
-            # 可以发送一条错误消息或者进行其他处理
 
     def handle_joke(self, event):
         url = "https://v2.alapi.cn/api/joke/random"
@@ -169,7 +146,6 @@ class NewsHub(Plugin):
             logger.error(f"Failed to fetch joke: {response.text}")
 
     def handle_weather(self, event, query_city=None):
-        # 如果用户提供了城市名称，则使用用户提供的；否则，默认使用深圳
         city_name = query_city if query_city else "深圳"
         url = "https://v2.alapi.cn/api/tianqi/seven"
         payload = f"token={self.config.get('token')}&city={city_name}"
@@ -238,11 +214,7 @@ class NewsHub(Plugin):
         return "每日定时或手动发送早报，及处理笑话、天气、油价、微博热搜和名人名言请求"
 
     def will_decorate_reply(self, event: Event):
-        # 这里可以添加在发送回复之前的装饰逻辑
-        # 如果没有特定的逻辑，可以简单地通过
         pass
 
     def will_send_reply(self, event: Event):
-        # 这里可以添加发送回复之前的逻辑
-        # 如果没有特定的逻辑，可以简单地通过
         pass
