@@ -25,6 +25,14 @@ class NewsHub(Plugin):
         if is_group:
             query = re.sub(r'@[\w]+\s+', '', query, count=1).strip()
 
+        weather_query_pattern = re.compile(r"(.+?)今天天气怎么样")
+        match = weather_query_pattern.search(query)
+        if match:
+            city_name = match.group(1).strip()
+            self.handle_weather(event, city_name)
+            event.bypass()
+            return
+
         commands = self.config.get("command", [])
         if any(re.search(r'\b' + re.escape(cmd) + r'\b', query) for cmd in commands):
             if query in ["早报", "今天有什么新闻"]:
