@@ -73,24 +73,33 @@ class NewsHub(Plugin):
         payload = f"token={token}&format=json"
         headers = {'Content-Type': "application/x-www-form-urlencoded"}
 
-        response = requests.request("POST", zaobao_api_url, data=payload, headers=headers)
-        if response.status_code == 200:
-            data = response.json()['data']
-            news_list = data['news']
-            weiyu = data['weiyu']
-            image_url = data['image']
-            date = data['date']
+        try:
+            response = requests.post(zaobao_api_url, data=payload, headers=headers)
+            if response.status_code == 200:
+                data = response.json().get('data')
+                if data:
+                    news_list = data.get('news', [])
+                    weiyu = data.get('weiyu', '')
+                    image_url = data.get('image', '')
+                    date = data.get('date', '')
 
-            formatted_news = f"【今日早报】{date}\n\n" + "\n".join(news_list) + f"\n\n{weiyu}"
+                    formatted_news = f"【今日早报】{date}\n\n" + "\n".join(news_list) + f"\n\n{weiyu}"
 
-            if reply_mode == "text":
-                return formatted_news
-            elif reply_mode == "image":
-                return image_url
-            elif reply_mode == "both":
-                return [formatted_news, image_url]
-        else:
-            logger.error(f"Failed to fetch daily news: {response.text}")
+                    if reply_mode == "text":
+                        return formatted_news
+                    elif reply_mode == "image":
+                        return image_url
+                    elif reply_mode == "both":
+                        return [formatted_news, image_url]
+                else:
+                    logger.error("API response is successful but does not contain data.")
+                    return None
+            else:
+                logger.error(f"Failed to fetch daily news with status code {response.status_code}: {response.text}")
+                return None
+        except Exception as e:
+            logger.error(f"Exception occurred while fetching daily news: {e}")
+            return None
 
     def daily_push(self):
         schedule_time = self.config.get("schedule_time")
@@ -101,9 +110,12 @@ class NewsHub(Plugin):
         single_chat_list = self.config.get("single_chat_list", [])
         group_chat_list = self.config.get("group_chat_list", [])
         reply_content = self.get_daily_news(reply_mode="text")
-        if reply_content:
-            reply = Reply(ReplyType.TEXT, reply_content)
-            self.push_to_chat(reply, single_chat_list, group_chat_list)
+        if reply_content is None:
+            logger.info("未获取到早报内容，本次定时推送跳过")
+            return
+
+        reply = Reply(ReplyType.TEXT, reply_content)
+        self.push_to_chat(reply, single_chat_list, group_chat_list)
 
     def push_to_chat(self, reply, single_chat_list, group_chat_list):
         for chat_id in single_chat_list + group_chat_list:
